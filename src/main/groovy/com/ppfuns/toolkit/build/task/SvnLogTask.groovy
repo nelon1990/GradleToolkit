@@ -5,6 +5,7 @@ import com.ppfuns.toolkit.build.extension.ToolkitExtension
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.Configuration
 import org.tmatesoft.svn.core.wc.*
 
 import java.util.zip.ZipFile
@@ -30,16 +31,22 @@ class SvnLogTask extends DefaultTask {
         file.createNewFile()
 
         List<Map> mapList = new ArrayList<>()
-        project.configurations.compile.incoming.files.each {
-            if (it.name.endsWith("aar")) {
-                def log = readSvnLog(it.absolutePath)
-                if (log != null && !log.isEmpty()) {
-                    mapList.add(log)
+
+        project.configurations.each { Configuration cfg ->
+            println(cfg.name)
+            if (cfg.name.toLowerCase().endsWith('compile')) {
+                cfg.incoming.files.each {
+                    if (it.name.endsWith("aar")) {
+                        def log = readSvnLog(it.absolutePath)
+                        if (log != null && !log.isEmpty() && !mapList.contains(log)) {
+                            mapList.add(log)
+                        }
+                    }
                 }
             }
         }
 
-        ToolkitExtension toolkitExt = project.extensions.findByName(PpfunsTools.TOOLKIT_EXT)
+        ToolkitExtension toolkitExt = project.extensions.findByName(PpfunsTools.TOOLKIT_EXT) as ToolkitExtension
         def svnVersion = toolkitExt.svnVersion
         if (svnVersion < 0) {
             svnVersion = getSvnVersion()
